@@ -2,6 +2,9 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
@@ -27,7 +30,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
 
       - name: Prepare web assets
         shell: bash
