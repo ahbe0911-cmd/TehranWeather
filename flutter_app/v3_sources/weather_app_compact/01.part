@@ -1,0 +1,225 @@
+                  ? const _Loading()
+                  : s == null
+                      ? _NoLocation(
+                          message: _message,
+                          gps: () => _useGps(),
+                          search: _openSearch,
+                        )
+                      : Column(
+                          children: [
+                            _Header(
+                              snapshot: s,
+                              refreshing: _refreshing,
+                              refresh: () => _refreshWeather(),
+                              search: _openSearch,
+                              gps: () => _useGps(),
+                            ),
+                            if (_message != null)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                                child: GlassCard(
+                                  radius: 16,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.info_outline_rounded, size: 18, color: appBlue),
+                                      const SizedBox(width: 7),
+                                      Expanded(
+                                        child: Text(
+                                          _message!,
+                                          style: const TextStyle(fontFamily: 'Nazanin', fontSize: 15),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            Expanded(
+                              child: AnimatedSwitcher(
+                                duration: 320.ms,
+                                child: switch (_tab) {
+                                  1 => _Hourly(key: const ValueKey(1), snapshot: s),
+                                  2 => _Daily(key: const ValueKey(2), snapshot: s),
+                                  3 => _Details(
+                                      key: const ValueKey(3),
+                                      snapshot: s,
+                                      gps: () => _useGps(),
+                                      search: _openSearch,
+                                    ),
+                                  _ => _Home(
+                                      key: const ValueKey(0),
+                                      snapshot: s,
+                                      refresh: () => _refreshWeather(),
+                                    ),
+                                },
+                              ),
+                            ),
+                            _Nav(index: _tab, changed: (v) => setState(() => _tab = v)),
+                          ],
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.snapshot,
+    required this.refreshing,
+    required this.refresh,
+    required this.search,
+    required this.gps,
+  });
+  final WeatherSnapshot snapshot;
+  final bool refreshing;
+  final VoidCallback refresh;
+  final VoidCallback search;
+  final VoidCallback gps;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 7, 16, 7),
+        child: Row(
+          children: [
+            _Circle(icon: Icons.search_rounded, onTap: search),
+            const Spacer(),
+            GestureDetector(
+              onTap: gps,
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.location_on_rounded, color: appBlue, size: 19),
+                      const SizedBox(width: 3),
+                      Text(
+                        snapshot.location.label,
+                        style: const TextStyle(fontFamily: 'Titr', fontSize: 20, color: appInk),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    shamsiDate(DateTime.now()),
+                    style: const TextStyle(fontFamily: 'Nazanin', color: appMuted, fontSize: 15),
+                  ),
+                ],
+              ),
+            ),
+            const Spacer(),
+            _Circle(
+              icon: refreshing ? Icons.sync_rounded : Icons.refresh_rounded,
+              onTap: refreshing ? null : refresh,
+            ),
+          ],
+        ),
+      );
+}
+
+class _Circle extends StatelessWidget {
+  const _Circle({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.white.withValues(alpha: .78),
+        borderRadius: BorderRadius.circular(15),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(15),
+          child: SizedBox(width: 44, height: 44, child: Icon(icon, color: appInk)),
+        ),
+      );
+}
+
+class _Home extends StatelessWidget {
+  const _Home({super.key, required this.snapshot, required this.refresh});
+  final WeatherSnapshot snapshot;
+  final Future<void> Function() refresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = snapshot.current;
+    return RefreshIndicator(
+      onRefresh: refresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.fromLTRB(16, 5, 16, 20),
+        children: [
+          GlassCard(
+            radius: 31,
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: weatherAccent(c.weatherCode, isDay: c.isDay).withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Icon(
+                        weatherIcon(c.weatherCode, isDay: c.isDay),
+                        size: 33,
+                        color: weatherAccent(c.weatherCode, isDay: c.isDay),
+                      ),
+                    )
+                        .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                        .scale(begin: const Offset(.96, .96), end: const Offset(1.06, 1.06), duration: 1700.ms),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            currentWeatherText(c),
+                            style: const TextStyle(fontFamily: 'Nazanin', fontSize: 20, fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            'حس می‌شود ${formatTemp(c.apparentTemperature)}',
+                            style: const TextStyle(color: appMuted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      formatTemp(c.temperature),
+                      textDirection: TextDirection.ltr,
+                      style: const TextStyle(fontFamily: 'Titr', fontSize: 43, height: 1),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                const LiveAnalogClock(size: 225),
+              ],
+            ),
+          ).animate().fadeIn(duration: 400.ms).slideY(begin: .03, end: 0),
+          const SizedBox(height: 11),
+          _RainNow(snapshot: snapshot),
+          const SizedBox(height: 11),
+          Row(
+            children: [
+              Expanded(child: _Metric(Icons.water_drop_rounded, 'رطوبت', '${faDigits(c.humidity)}٪', appBlue)),
+              const SizedBox(width: 8),
+              Expanded(child: _Metric(Icons.air_rounded, 'باد', '${faDigits(c.windSpeed.round())}', const Color(0xFF4C9CA8))),
+              const SizedBox(width: 8),
+              Expanded(child: _Metric(Icons.speed_rounded, 'فشار', '${faDigits(c.pressure.round())}', const Color(0xFF6E7EDB))),
+            ],
+          ),
+          const SizedBox(height: 11),
+          _Hours(items: snapshot.hourly),
+          const SizedBox(height: 8),
+          Text(
+            'آخرین بروزرسانی ${formatClock(snapshot.fetchedAt)}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontFamily: 'Nazanin', color: appMuted, fontSize: 15),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
