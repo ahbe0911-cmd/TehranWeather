@@ -50,7 +50,7 @@ jobs:
             --platforms=android \
             --project-name=safiabad_weather_native \
             --org=ir.safiabad
-          rm -rf native_build/lib
+          rm -rf native_build/lib native_build/test
           cp -R source/lib native_build/lib
           cp pubspec.native.yaml native_build/pubspec.yaml
           cp android_overrides/AndroidManifest.xml native_build/android/app/src/main/AndroidManifest.xml
@@ -61,7 +61,7 @@ jobs:
 
       - name: Analyze Dart code
         working-directory: flutter_app/native_build
-        run: flutter analyze
+        run: flutter analyze lib
 
       - name: Build release APK
         working-directory: flutter_app/native_build
