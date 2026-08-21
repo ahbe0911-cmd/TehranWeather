@@ -1,0 +1,72 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Prepare web assets
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf www android node_modules
+          mkdir -p www
+          cp index.html manifest.json service-worker.js www/
+          cp -R css js icons www/
+
+      - name: Create Capacitor Android project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          npm init -y
+          npm install --save-exact @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npx cap init "هواشناسی صفی‌آباد" "ir.safiabad.weather" --web-dir www
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f android/app/build/outputs/apk/debug/app-debug.apk
+          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TehranWeather-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
