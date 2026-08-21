@@ -19,7 +19,7 @@ permissions:
 jobs:
   build-native-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout source
@@ -52,8 +52,26 @@ jobs:
             --org=ir.safiabad
           rm -rf native_build/lib native_build/test
           cp -R source/lib native_build/lib
+          cat v3_sources/weather_app_compact/*.part > native_build/lib/weather_app.dart
           cp pubspec.native.yaml native_build/pubspec.yaml
           cp android_overrides/AndroidManifest.xml native_build/android/app/src/main/AndroidManifest.xml
+
+          mkdir -p native_build/assets/fonts
+
+          curl --fail --location --retry 3 \
+            'https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/ttf/Vazirmatn-Regular.ttf' \
+            --output native_build/assets/fonts/Vazirmatn-Regular.ttf
+          curl --fail --location --retry 3 \
+            'https://raw.githubusercontent.com/pishnahadebehtar/Sport_News_Website/8fd3bb4a913670c52db3b047e1e6f7d3927c2d24/public/font/Far_Nazanin.ttf' \
+            --output native_build/assets/fonts/Far_Nazanin.ttf
+          curl --fail --location --retry 3 \
+            'https://raw.githubusercontent.com/fahimahmadi/ak_hospital_front/4d25d3712a000c61c5c5d7181d758cbfaa0272f0/src/assets/fonts/Far_TitrBd.ttf' \
+            --output native_build/assets/fonts/Far_TitrBd.ttf
+
+          test -s native_build/assets/fonts/Vazirmatn-Regular.ttf
+          test -s native_build/assets/fonts/Far_Nazanin.ttf
+          test -s native_build/assets/fonts/Far_TitrBd.ttf
+          ls -lh native_build/assets/fonts
 
       - name: Resolve Flutter packages
         working-directory: flutter_app/native_build
@@ -77,7 +95,7 @@ jobs:
       - name: Upload native APK
         uses: actions/upload-artifact@v4
         with:
-          name: SafiabadWeather-Native-release
+          name: SafiabadWeather-Native-V3-release
           path: flutter_app/native_build/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
