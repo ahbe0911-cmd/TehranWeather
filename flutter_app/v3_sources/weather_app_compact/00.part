@@ -1,0 +1,225 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+
+import 'models.dart';
+import 'services.dart';
+import 'weather_ui.dart';
+
+class WeatherNativeApp extends StatelessWidget {
+  const WeatherNativeApp({super.key});
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'هواشناسی زنده',
+        theme: ThemeData(
+          useMaterial3: true,
+          brightness: Brightness.light,
+          fontFamily: 'Vazir',
+          colorScheme: ColorScheme.fromSeed(seedColor: appBlue),
+          scaffoldBackgroundColor: Colors.transparent,
+          textTheme: ThemeData.light().textTheme.apply(
+                bodyColor: appInk,
+                displayColor: appInk,
+                fontFamily: 'Vazir',
+              ),
+        ),
+        home: const WeatherShell(),
+      );
+}
+
+class WeatherShell extends StatefulWidget {
+  const WeatherShell({super.key});
+  @override
+  State<WeatherShell> createState() => _WeatherShellState();
+}
+
+class _WeatherShellState extends State<WeatherShell> with WidgetsBindingObserver {
+  final _location = LocationService();
+  final _store = LocationStore();
+  final _weather = const WeatherService();
+  final _cache = WeatherCache();
+
+  WeatherSnapshot? _snapshot;
+  GeoPointInfo? _selected;
+  String? _message;
+  bool _loading = true;
+  bool _refreshing = false;
+  int _tab = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _start();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _selected != null) {
+      _refreshWeather(silent: true);
+    }
+  }
+
+  Future<void> _start() async {
+    final cached = await _cache.load();
+    var selected = await _store.loadSelected();
+    if (selected == null && cached != null) {
+      selected = cached.location;
+      await _store.saveSelected(selected);
+    }
+    if (!mounted) return;
+    setState(() {
+      _snapshot = cached;
+      _selected = selected;
+      _loading = cached == null;
+    });
+
+    if (selected != null) {
+      await _refreshWeather(silent: cached != null);
+    } else if (!await _store.wasPermissionPrompted()) {
+      await _store.markPermissionPrompted();
+      await _useGps(firstRun: true);
+    } else if (mounted) {
+      setState(() => _loading = false);
+    }
+
+    _timer = Timer.periodic(const Duration(minutes: 5), (_) {
+      if (_selected != null) _refreshWeather(silent: true);
+    });
+  }
+
+  Future<void> _refreshWeather({bool silent = false}) async {
+    final point = _selected;
+    if (point == null || _refreshing) return;
+    setState(() {
+      _refreshing = true;
+      if (!silent && _snapshot == null) _loading = true;
+      _message = null;
+    });
+    try {
+      final fresh = await _weather.fetch(point);
+      await _cache.save(fresh);
+      if (!mounted) return;
+      setState(() {
+        _snapshot = fresh;
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _message = 'ارتباط زنده برقرار نشد؛ آخرین اطلاعات ذخیره‌شده نمایش داده می‌شود.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
+  Future<void> _useGps({bool firstRun = false}) async {
+    if (_refreshing) return;
+    setState(() {
+      _refreshing = true;
+      _message = null;
+      if (_snapshot == null) _loading = true;
+    });
+    try {
+      final point = await _location.locate(requestPermission: true);
+      await _store.saveSelected(point);
+      if (!mounted) return;
+      _selected = point;
+      final fresh = await _weather.fetch(point);
+      await _cache.save(fresh);
+      if (!mounted) return;
+      setState(() {
+        _snapshot = fresh;
+        _loading = false;
+        _tab = 0;
+      });
+    } on LocationProblem catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _message = e.message;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _message = firstRun
+              ? 'موقعیت اولیه دریافت نشد. می‌توانید شهر را دستی جستجو کنید.'
+              : 'دریافت موقعیت جدید ممکن نشد.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
+  Future<void> _choose(GeoPointInfo point) async {
+    await _store.saveSelected(point);
+    if (!mounted) return;
+    setState(() {
+      _selected = point;
+      _tab = 0;
+    });
+    await _refreshWeather();
+  }
+
+  Future<void> _openSearch() async {
+    final point = await showModalBottomSheet<GeoPointInfo>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: const Color(0xFFF7FBFE),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      builder: (_) => _SearchSheet(service: _location),
+    );
+    if (point != null) await _choose(point);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _snapshot;
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: AnimatedSky(
+                code: s?.current.weatherCode ?? 2,
+                isDay: s?.current.isDay ?? true,
+              ),
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: .03),
+                      const Color(0xFFF7FBFE).withValues(alpha: .42),
+                      const Color(0xFFF7FBFE).withValues(alpha: .9),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: _loading && s == null
