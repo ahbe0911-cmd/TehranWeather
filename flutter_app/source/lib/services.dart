@@ -18,6 +18,8 @@ class LocationProblem implements Exception {
 }
 
 class LocationService {
+  final Geocoding _geocoding = Geocoding();
+
   Future<GeoPointInfo> locate() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -46,9 +48,12 @@ class LocationService {
 
     Position position;
     try {
+      const settings = LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        timeLimit: Duration(seconds: 18),
+      );
       position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.bestForNavigation,
-        timeLimit: const Duration(seconds: 18),
+        locationSettings: settings,
       );
     } catch (_) {
       final fallback = await Geolocator.getLastKnownPosition();
@@ -63,7 +68,7 @@ class LocationService {
     String label = 'موقعیت فعلی';
     String? addressLine;
     try {
-      final places = await placemarkFromCoordinates(
+      final places = await _geocoding.placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
@@ -92,7 +97,7 @@ class LocationService {
         }
       }
     } catch (_) {
-      // Coordinates are still exact even if platform reverse-geocoding is unavailable.
+      // Coordinates remain available even if reverse geocoding is unavailable.
     }
 
     return GeoPointInfo(
