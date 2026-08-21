@@ -1,0 +1,220 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+
+import 'models.dart';
+import 'services.dart';
+import 'weather_ui.dart';
+
+class WeatherNativeApp extends StatelessWidget {
+  const WeatherNativeApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'هواشناسی زنده',
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.light,
+        fontFamily: 'Vazir',
+        scaffoldBackgroundColor: Colors.transparent,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: appBlue,
+          brightness: Brightness.light,
+        ),
+        textTheme: ThemeData.light().textTheme.apply(
+              bodyColor: appInk,
+              displayColor: appInk,
+              fontFamily: 'Vazir',
+            ),
+      ),
+      home: const WeatherShell(),
+    );
+  }
+}
+
+class WeatherShell extends StatefulWidget {
+  const WeatherShell({super.key});
+
+  @override
+  State<WeatherShell> createState() => _WeatherShellState();
+}
+
+class _WeatherShellState extends State<WeatherShell>
+    with WidgetsBindingObserver {
+  final _location = LocationService();
+  final _store = LocationStore();
+  final _weather = const WeatherService();
+  final _cache = WeatherCache();
+
+  WeatherSnapshot? _snapshot;
+  GeoPointInfo? _selectedLocation;
+  LocationProblem? _locationProblem;
+  String? _error;
+  bool _loading = true;
+  bool _refreshing = false;
+  int _tab = 0;
+  Timer? _autoRefresh;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _start();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoRefresh?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _selectedLocation != null) {
+      _loadWeather(_selectedLocation!, silent: true);
+    }
+  }
+
+  Future<void> _start() async {
+    final cached = await _cache.load();
+    var selected = await _store.loadSelected();
+
+    if (selected == null && cached != null) {
+      selected = cached.location;
+      await _store.saveSelected(selected);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _snapshot = cached;
+      _selectedLocation = selected;
+      _loading = cached == null;
+    });
+
+    if (selected != null) {
+      await _loadWeather(selected, silent: cached != null);
+    } else {
+      final prompted = await _store.wasPermissionPrompted();
+      if (!prompted) {
+        await _store.markPermissionPrompted();
+        await _useGps(firstRun: true);
+      } else if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+
+    _autoRefresh?.cancel();
+    _autoRefresh = Timer.periodic(const Duration(minutes: 5), (_) {
+      final point = _selectedLocation;
+      if (point != null) _loadWeather(point, silent: true);
+    });
+  }
+
+  Future<void> _loadWeather(
+    GeoPointInfo point, {
+    bool silent = false,
+  }) async {
+    if (_refreshing) return;
+    if (mounted) {
+      setState(() {
+        _refreshing = true;
+        if (!silent && _snapshot == null) _loading = true;
+        _error = null;
+      });
+    }
+
+    try {
+      final fresh = await _weather.fetch(point);
+      await _cache.save(fresh);
+      if (!mounted) return;
+      setState(() {
+        _snapshot = fresh;
+        _selectedLocation = point;
+        _loading = false;
+        _locationProblem = null;
+        _error = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'بروزرسانی زنده انجام نشد؛ آخرین داده ذخیره‌شده نمایش داده می‌شود.';
+      });
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
+  Future<void> _useGps({bool firstRun = false}) async {
+    if (_refreshing) return;
+    if (mounted) {
+      setState(() {
+        _refreshing = true;
+        if (_snapshot == null) _loading = true;
+        _locationProblem = null;
+        _error = null;
+      });
+    }
+
+    try {
+      final point = await _location.locate(requestPermission: true);
+      await _store.saveSelected(point);
+      if (!mounted) return;
+      setState(() => _selectedLocation = point);
+      final fresh = await _weather.fetch(point);
+      await _cache.save(fresh);
+      if (!mounted) return;
+      setState(() {
+        _snapshot = fresh;
+        _loading = false;
+      });
+    } on LocationProblem catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _locationProblem = e;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = firstRun
+            ? 'راه‌اندازی اولیه کامل نشد. شهر را جستجو کنید یا GPS را دوباره بزنید.'
+            : 'دریافت موقعیت جدید ممکن نشد.';
+        _loading = false;
+      });
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
+  Future<void> _selectLocation(GeoPointInfo point) async {
+    await _store.saveSelected(point);
+    if (!mounted) return;
+    setState(() {
+      _selectedLocation = point;
+      _locationProblem = null;
+      _tab = 0;
+    });
+    await _loadWeather(point);
+  }
+
+  Future<void> _showSearch() async {
+    final point = await showModalBottomSheet<GeoPointInfo>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFFF7FBFE),
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      builder: (context) => _PlaceSearchSheet(location: _location),
+    );
+    if (point != null) await _selectLocation(point);
+  }
+
+  Future<void> _showLocationActions() async {
+    final point = _selectedLocation ?? _snapshot?.location;
