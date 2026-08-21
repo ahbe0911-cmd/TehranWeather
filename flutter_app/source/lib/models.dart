@@ -74,17 +74,42 @@ class CurrentWeather {
       };
 
   factory CurrentWeather.fromJson(Map<String, dynamic> json) => CurrentWeather(
-        temperature: (json['temperature'] as num).toDouble(),
-        apparentTemperature: (json['apparentTemperature'] as num).toDouble(),
-        humidity: (json['humidity'] as num).toInt(),
-        pressure: (json['pressure'] as num).toDouble(),
-        windSpeed: (json['windSpeed'] as num).toDouble(),
-        windDirection: (json['windDirection'] as num).toDouble(),
-        precipitation: (json['precipitation'] as num).toDouble(),
-        cloudCover: (json['cloudCover'] as num).toInt(),
-        weatherCode: (json['weatherCode'] as num).toInt(),
-        isDay: json['isDay'] as bool,
-        time: DateTime.parse(json['time'] as String),
+        temperature: (json['temperature'] as num?)?.toDouble() ?? 0,
+        apparentTemperature:
+            (json['apparentTemperature'] as num?)?.toDouble() ?? 0,
+        humidity: (json['humidity'] as num?)?.toInt() ?? 0,
+        pressure: (json['pressure'] as num?)?.toDouble() ?? 0,
+        windSpeed: (json['windSpeed'] as num?)?.toDouble() ?? 0,
+        windDirection: (json['windDirection'] as num?)?.toDouble() ?? 0,
+        precipitation: (json['precipitation'] as num?)?.toDouble() ?? 0,
+        cloudCover: (json['cloudCover'] as num?)?.toInt() ?? 0,
+        weatherCode: (json['weatherCode'] as num?)?.toInt() ?? 0,
+        isDay: json['isDay'] as bool? ?? true,
+        time: DateTime.tryParse(json['time'] as String? ?? '') ?? DateTime.now(),
+      );
+}
+
+class MinuteWeather {
+  const MinuteWeather({
+    required this.time,
+    required this.precipitation,
+    required this.weatherCode,
+  });
+
+  final DateTime time;
+  final double precipitation;
+  final int weatherCode;
+
+  Map<String, dynamic> toJson() => {
+        'time': time.toIso8601String(),
+        'precipitation': precipitation,
+        'weatherCode': weatherCode,
+      };
+
+  factory MinuteWeather.fromJson(Map<String, dynamic> json) => MinuteWeather(
+        time: DateTime.tryParse(json['time'] as String? ?? '') ?? DateTime.now(),
+        precipitation: (json['precipitation'] as num?)?.toDouble() ?? 0,
+        weatherCode: (json['weatherCode'] as num?)?.toInt() ?? 0,
       );
 }
 
@@ -93,6 +118,7 @@ class HourlyWeather {
     required this.time,
     required this.temperature,
     required this.precipitationProbability,
+    required this.precipitation,
     required this.weatherCode,
     required this.windSpeed,
   });
@@ -100,6 +126,7 @@ class HourlyWeather {
   final DateTime time;
   final double temperature;
   final int precipitationProbability;
+  final double precipitation;
   final int weatherCode;
   final double windSpeed;
 
@@ -107,17 +134,19 @@ class HourlyWeather {
         'time': time.toIso8601String(),
         'temperature': temperature,
         'precipitationProbability': precipitationProbability,
+        'precipitation': precipitation,
         'weatherCode': weatherCode,
         'windSpeed': windSpeed,
       };
 
   factory HourlyWeather.fromJson(Map<String, dynamic> json) => HourlyWeather(
-        time: DateTime.parse(json['time'] as String),
-        temperature: (json['temperature'] as num).toDouble(),
+        time: DateTime.tryParse(json['time'] as String? ?? '') ?? DateTime.now(),
+        temperature: (json['temperature'] as num?)?.toDouble() ?? 0,
         precipitationProbability:
-            (json['precipitationProbability'] as num).toInt(),
-        weatherCode: (json['weatherCode'] as num).toInt(),
-        windSpeed: (json['windSpeed'] as num).toDouble(),
+            (json['precipitationProbability'] as num?)?.toInt() ?? 0,
+        precipitation: (json['precipitation'] as num?)?.toDouble() ?? 0,
+        weatherCode: (json['weatherCode'] as num?)?.toInt() ?? 0,
+        windSpeed: (json['windSpeed'] as num?)?.toDouble() ?? 0,
       );
 }
 
@@ -151,14 +180,16 @@ class DailyWeather {
       };
 
   factory DailyWeather.fromJson(Map<String, dynamic> json) => DailyWeather(
-        date: DateTime.parse(json['date'] as String),
-        maxTemperature: (json['maxTemperature'] as num).toDouble(),
-        minTemperature: (json['minTemperature'] as num).toDouble(),
+        date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
+        maxTemperature: (json['maxTemperature'] as num?)?.toDouble() ?? 0,
+        minTemperature: (json['minTemperature'] as num?)?.toDouble() ?? 0,
         precipitationProbability:
-            (json['precipitationProbability'] as num).toInt(),
-        weatherCode: (json['weatherCode'] as num).toInt(),
-        sunrise: DateTime.parse(json['sunrise'] as String),
-        sunset: DateTime.parse(json['sunset'] as String),
+            (json['precipitationProbability'] as num?)?.toInt() ?? 0,
+        weatherCode: (json['weatherCode'] as num?)?.toInt() ?? 0,
+        sunrise:
+            DateTime.tryParse(json['sunrise'] as String? ?? '') ?? DateTime.now(),
+        sunset:
+            DateTime.tryParse(json['sunset'] as String? ?? '') ?? DateTime.now(),
       );
 }
 
@@ -166,6 +197,7 @@ class WeatherSnapshot {
   const WeatherSnapshot({
     required this.location,
     required this.current,
+    required this.minutely,
     required this.hourly,
     required this.daily,
     required this.fetchedAt,
@@ -174,6 +206,7 @@ class WeatherSnapshot {
 
   final GeoPointInfo location;
   final CurrentWeather current;
+  final List<MinuteWeather> minutely;
   final List<HourlyWeather> hourly;
   final List<DailyWeather> daily;
   final DateTime fetchedAt;
@@ -182,6 +215,7 @@ class WeatherSnapshot {
   WeatherSnapshot copyWith({bool? fromCache}) => WeatherSnapshot(
         location: location,
         current: current,
+        minutely: minutely,
         hourly: hourly,
         daily: daily,
         fetchedAt: fetchedAt,
@@ -191,6 +225,7 @@ class WeatherSnapshot {
   Map<String, dynamic> toJson() => {
         'location': location.toJson(),
         'current': current.toJson(),
+        'minutely': minutely.map((e) => e.toJson()).toList(),
         'hourly': hourly.map((e) => e.toJson()).toList(),
         'daily': daily.map((e) => e.toJson()).toList(),
         'fetchedAt': fetchedAt.toIso8601String(),
@@ -199,17 +234,26 @@ class WeatherSnapshot {
   String encode() => jsonEncode(toJson());
 
   factory WeatherSnapshot.fromJson(Map<String, dynamic> json) => WeatherSnapshot(
-        location:
-            GeoPointInfo.fromJson(json['location'] as Map<String, dynamic>),
-        current:
-            CurrentWeather.fromJson(json['current'] as Map<String, dynamic>),
-        hourly: (json['hourly'] as List<dynamic>)
-            .map((e) => HourlyWeather.fromJson(e as Map<String, dynamic>))
+        location: GeoPointInfo.fromJson(
+          (json['location'] as Map?)?.cast<String, dynamic>() ?? const {},
+        ),
+        current: CurrentWeather.fromJson(
+          (json['current'] as Map?)?.cast<String, dynamic>() ?? const {},
+        ),
+        minutely: ((json['minutely'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => MinuteWeather.fromJson(e.cast<String, dynamic>()))
             .toList(),
-        daily: (json['daily'] as List<dynamic>)
-            .map((e) => DailyWeather.fromJson(e as Map<String, dynamic>))
+        hourly: ((json['hourly'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => HourlyWeather.fromJson(e.cast<String, dynamic>()))
             .toList(),
-        fetchedAt: DateTime.parse(json['fetchedAt'] as String),
+        daily: ((json['daily'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => DailyWeather.fromJson(e.cast<String, dynamic>()))
+            .toList(),
+        fetchedAt: DateTime.tryParse(json['fetchedAt'] as String? ?? '') ??
+            DateTime.now(),
       );
 
   factory WeatherSnapshot.decode(String encoded) => WeatherSnapshot.fromJson(
