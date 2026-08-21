@@ -142,45 +142,65 @@ class _Home extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = snapshot.current;
+    final width = MediaQuery.sizeOf(context).width;
+    final clockSize = (width - 58).clamp(278.0, 326.0).toDouble();
+
     return RefreshIndicator(
       onRefresh: refresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-        padding: const EdgeInsets.fromLTRB(16, 5, 16, 20),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
         children: [
           GlassCard(
             radius: 31,
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 13),
             child: Column(
               children: [
                 Row(
                   children: [
                     Container(
-                      width: 56,
-                      height: 56,
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
                         color: weatherAccent(c.weatherCode, isDay: c.isDay).withValues(alpha: .12),
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(17),
                       ),
                       child: Icon(
                         weatherIcon(c.weatherCode, isDay: c.isDay),
-                        size: 33,
+                        size: 31,
                         color: weatherAccent(c.weatherCode, isDay: c.isDay),
                       ),
                     )
                         .animate(onPlay: (controller) => controller.repeat(reverse: true))
-                        .scale(begin: const Offset(.96, .96), end: const Offset(1.06, 1.06), duration: 1700.ms),
-                    const SizedBox(width: 11),
+                        .scale(
+                          begin: const Offset(.96, .96),
+                          end: const Offset(1.06, 1.06),
+                          duration: 1700.ms,
+                        ),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             currentWeatherText(c),
-                            style: const TextStyle(fontFamily: 'Nazanin', fontSize: 20, fontWeight: FontWeight.w700),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'Nazanin',
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
+                              height: 1.15,
+                            ),
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             'حس می‌شود ${formatTemp(c.apparentTemperature)}',
-                            style: const TextStyle(color: appMuted, fontSize: 12),
+                            style: const TextStyle(
+                              fontFamily: 'Vazir',
+                              color: appMuted,
+                              fontSize: 11,
+                            ),
                           ),
                         ],
                       ),
@@ -188,34 +208,53 @@ class _Home extends StatelessWidget {
                     Text(
                       formatTemp(c.temperature),
                       textDirection: TextDirection.ltr,
-                      style: const TextStyle(fontFamily: 'Titr', fontSize: 43, height: 1),
+                      style: const TextStyle(
+                        fontFamily: 'Titr',
+                        fontSize: 40,
+                        height: 1,
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 5),
-                const LiveAnalogClock(size: 225),
+                const SizedBox(height: 4),
+                V4WeatherClock(
+                  snapshot: snapshot,
+                  size: clockSize,
+                ),
               ],
             ),
-          ).animate().fadeIn(duration: 400.ms).slideY(begin: .03, end: 0),
-          const SizedBox(height: 11),
-          _RainNow(snapshot: snapshot),
-          const SizedBox(height: 11),
+          ).animate().fadeIn(duration: 400.ms).slideY(begin: .025, end: 0),
+          const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _Metric(Icons.water_drop_rounded, 'رطوبت', '${faDigits(c.humidity)}٪', appBlue)),
-              const SizedBox(width: 8),
-              Expanded(child: _Metric(Icons.air_rounded, 'باد', '${faDigits(c.windSpeed.round())}', const Color(0xFF4C9CA8))),
-              const SizedBox(width: 8),
-              Expanded(child: _Metric(Icons.speed_rounded, 'فشار', '${faDigits(c.pressure.round())}', const Color(0xFF6E7EDB))),
+              Expanded(
+                child: _Metric(
+                  Icons.air_rounded,
+                  'سرعت باد km/h',
+                  '${faDigits(c.windSpeed.round())}',
+                  const Color(0xFF4C9CA8),
+                ),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: _Metric(
+                  Icons.speed_rounded,
+                  'فشار هوا hPa',
+                  '${faDigits(c.pressure.round())}',
+                  const Color(0xFF6E7EDB),
+                ),
+              ),
             ],
-          ),
-          const SizedBox(height: 11),
-          _Hours(items: snapshot.hourly),
+          ).animate().fadeIn(delay: 110.ms),
           const SizedBox(height: 8),
           Text(
             'آخرین بروزرسانی ${formatClock(snapshot.fetchedAt)}',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: 'Nazanin', color: appMuted, fontSize: 15),
+            style: const TextStyle(
+              fontFamily: 'Nazanin',
+              color: appMuted,
+              fontSize: 14,
+            ),
           ),
         ],
       ),
