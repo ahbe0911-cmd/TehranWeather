@@ -1,0 +1,83 @@
+name: Build Flutter Native APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/build-flutter-apk.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'flutter_app/**'
+      - '.github/workflows/build-flutter-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-native-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Generate Android native scaffold
+        working-directory: flutter_app
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf native_build
+          flutter create native_build \
+            --platforms=android \
+            --project-name=safiabad_weather_native \
+            --org=ir.safiabad
+          rm -rf native_build/lib
+          cp -R source/lib native_build/lib
+          cp pubspec.native.yaml native_build/pubspec.yaml
+          cp android_overrides/AndroidManifest.xml native_build/android/app/src/main/AndroidManifest.xml
+
+      - name: Resolve Flutter packages
+        working-directory: flutter_app/native_build
+        run: flutter pub get
+
+      - name: Analyze Dart code
+        working-directory: flutter_app/native_build
+        run: flutter analyze
+
+      - name: Build release APK
+        working-directory: flutter_app/native_build
+        run: flutter build apk --release
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f flutter_app/native_build/build/app/outputs/flutter-apk/app-release.apk
+          ls -lh flutter_app/native_build/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload native APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SafiabadWeather-Native-release
+          path: flutter_app/native_build/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
