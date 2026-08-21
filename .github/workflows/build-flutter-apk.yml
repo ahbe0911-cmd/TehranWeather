@@ -55,7 +55,7 @@ jobs:
           cat v3_sources/weather_app_compact/*.part > native_build/lib/weather_app.dart
 
           # Dart's conditional expression infers num when the fallback is integer 0.
-          # Keep rainfall values explicitly double for the V3 models.
+          # Keep rainfall values explicitly double for the native models.
           sed -i "s/final amount = i < amounts.length ? _double(amounts\[i\]) : 0;/final amount = i < amounts.length ? _double(amounts[i]) : 0.0;/" native_build/lib/services.dart
           sed -i "s/final amount = i < precipitation.length ? _double(precipitation\[i\]) : 0;/final amount = i < precipitation.length ? _double(precipitation[i]) : 0.0;/" native_build/lib/services.dart
 
@@ -101,7 +101,7 @@ jobs:
       - name: Upload native APK
         uses: actions/upload-artifact@v4
         with:
-          name: SafiabadWeather-Native-V3-release
+          name: SafiabadWeather-Native-V4-release
           path: flutter_app/native_build/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
