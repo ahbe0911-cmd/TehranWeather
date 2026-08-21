@@ -1,7 +1,7 @@
 name: safiabad_weather_native
-description: Native Persian weather application with precise GPS and live animated UI.
+description: Native Persian live weather application with precise GPS, saved location and animated UI.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.1.0+3
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -24,3 +24,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Vazir
+      fonts:
+        - asset: assets/fonts/Vazirmatn-Regular.ttf
+    - family: Nazanin
+      fonts:
+        - asset: assets/fonts/Far_Nazanin.ttf
+    - family: Titr
+      fonts:
+        - asset: assets/fonts/Far_TitrBd.ttf
