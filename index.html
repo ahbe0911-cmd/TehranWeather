@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>هواشناسی صفی‌آباد</title>
+<meta name="description" content="اپلیکیشن هواشناسی صفی‌آباد، مینودشت، استان گلستان">
+<meta name="theme-color" content="#3a8dde">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===== HEADER (shared) ===== -->
+  <header class="topbar">
+    <button class="icon-btn" id="menuBtn" aria-label="منو">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="topbar-title">
+      <h1 id="cityName">در حال یافتن موقعیت…</h1>
+      <span id="cityDate"></span>
+    </div>
+    <button class="icon-btn" id="alertsBtn" aria-label="هشدارها">
+      <svg viewBox="0 0 24 24"><path d="M12 4a5 5 0 00-5 5v3.2c0 .8-.3 1.5-.8 2.1L5 16h14l-1.2-1.7c-.5-.6-.8-1.3-.8-2.1V9a5 5 0 00-5-5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 005 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <span class="dot" id="alertDot" hidden></span>
+    </button>
+  </header>
+
+  <main id="views">
+
+    <!-- ===== 1. HOURLY / CLOCK VIEW ===== -->
+    <section class="view active" id="view-hourly">
+      <div class="clock-card card">
+        <svg id="clockFace" viewBox="0 0 220 220" class="clock-svg"></svg>
+        <div class="clock-time" id="digitalTime">--:--</div>
+      </div>
+
+      <div class="row two">
+        <div class="card pill">
+          <span class="pill-icon">☀️</span>
+          <div><b id="curTemp">--°</b><small>دما</small></div>
+        </div>
+        <div class="card pill">
+          <span class="pill-icon">💧</span>
+          <div><b id="curHumidity">--%</b><small>رطوبت</small></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">احتمال بارش در هر ساعت</h3>
+        <div class="hourly-strip" id="hourlyStrip"></div>
+      </div>
+
+      <div class="row four">
+        <div class="stat-card"><span class="si">🌡️</span><b id="statFeels">--°</b><small>دمای احساس شده</small></div>
+        <div class="stat-card"><span class="si">💨</span><b id="statWind">--</b><small>سرعت باد</small></div>
+        <div class="stat-card"><span class="si">💧</span><b id="statHum">--%</b><small>رطوبت هوا</small></div>
+        <div class="stat-card"><span class="si">🌧️</span><b id="statPressure">--</b><small>فشار هوا</small></div>
+      </div>
+    </section>
+
+    <!-- ===== 2. DAILY FORECAST VIEW ===== -->
+    <section class="view" id="view-daily">
+      <p class="section-caption">پیش‌بینی ۷ روز آینده</p>
+      <div class="card daily-list" id="dailyList"></div>
+      <div class="card summary-card">
+        <span class="summary-icon">☂️</span>
+        <p id="dailySummary">در حال بارگذاری خلاصه وضعیت هوا…</p>
+      </div>
+    </section>
+
+    <!-- ===== 3. MAP / RADAR VIEW ===== -->
+    <section class="view" id="view-map">
+      <div class="card legend-card">
+        <div class="legend-row"><span>زیاد</span><span class="legend-bar"></span><span>باران</span></div>
+      </div>
+      <div class="card map-card">
+        <div id="radarMap"></div>
+      </div>
+      <div class="hourly-strip" id="mapStrip"></div>
+    </section>
+
+    <!-- ===== 4. DETAILS VIEW ===== -->
+    <section class="view" id="view-details">
+      <div class="grid three">
+        <div class="stat-card"><b id="dPressure">--</b><small>فشار هوا</small></div>
+        <div class="stat-card"><b id="dUv">--</b><small>شاخص UV</small></div>
+        <div class="stat-card"><b id="dWindDir">--</b><small>جهت باد</small></div>
+        <div class="stat-card"><b id="dSunrise">--:--</b><small>طلوع خورشید</small></div>
+        <div class="stat-card"><b id="dSunset">--:--</b><small>غروب خورشید</small></div>
+        <div class="stat-card"><b id="dVisibility">--</b><small>دید افقی</small></div>
+        <div class="stat-card"><b id="dAqi">--</b><small>کیفیت هوا (AQI)</small></div>
+        <div class="stat-card"><b id="dFeels">--°</b><small>احساس دما</small></div>
+        <div class="stat-card"><b id="dDewpoint">--°</b><small>نقطه شبنم</small></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== ALERTS OVERLAY ===== -->
+  <section class="overlay" id="view-alerts">
+    <header class="topbar">
+      <button class="icon-btn" id="closeAlertsBtn">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="topbar-title"><h1>هشدارها و اطلاع‌رسانی</h1></div>
+      <span style="width:40px"></span>
+    </header>
+    <div class="overlay-body">
+      <div id="alertsList"></div>
+      <h3 class="section-caption">یادآوری‌های من</h3>
+      <div class="card reminder-row">
+        <span>🔔 یادآوری چتر</span>
+        <label class="switch"><input type="checkbox" id="remChatr" checked><span></span></label>
+      </div>
+      <div class="card reminder-row">
+        <span>🪴 یادآوری آبیاری گیاهان</span>
+        <label class="switch"><input type="checkbox" id="remPlant"><span></span></label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SETTINGS OVERLAY ===== -->
+  <section class="overlay" id="view-settings">
+    <header class="topbar">
+      <button class="icon-btn" id="closeSettingsBtn">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="topbar-title"><h1>تنظیمات و ترجیحات</h1></div>
+      <span style="width:40px"></span>
+    </header>
+    <div class="overlay-body">
+
+      <h3 class="section-caption">حساب و مکان</h3>
+      <div class="card settings-list">
+        <div class="settings-row" id="locSearchRow">
+          <span>موقعیت پیش‌فرض</span>
+          <input id="citySearchInput" placeholder="نام شهر یا روستا…" autocomplete="off">
+        </div>
+        <div id="citySearchResults"></div>
+        <button class="btn-secondary" id="useMyLocationBtn">📍 استفاده از موقعیت فعلی من</button>
+      </div>
+
+      <h3 class="section-caption">واحدها</h3>
+      <div class="card settings-list">
+        <div class="settings-row">
+          <span>واحد دما</span>
+          <select id="unitTemp"><option value="c">سلسیوس (°C)</option><option value="f">فارنهایت (°F)</option></select>
+        </div>
+        <div class="settings-row">
+          <span>واحد سرعت باد</span>
+          <select id="unitWind"><option value="kmh">کیلومتر بر ساعت</option><option value="ms">متر بر ثانیه</option><option value="mph">مایل بر ساعت</option></select>
+        </div>
+      </div>
+
+      <h3 class="section-caption">ظاهر</h3>
+      <div class="card settings-list">
+        <div class="settings-row">
+          <span>حالت نمایش</span>
+          <select id="themeSelect"><option value="auto">خودکار</option><option value="light">روشن</option><option value="dark">تیره</option></select>
+        </div>
+      </div>
+
+      <h3 class="section-caption">درباره برنامه</h3>
+      <div class="card settings-list">
+        <div class="settings-row"><span>نسخه برنامه</span><span>۱.۰.۰</span></div>
+        <div class="settings-row"><span>منبع داده</span><span>Open-Meteo</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="bottomnav">
+    <button class="navbtn active" data-view="hourly">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>ساعتی</span>
+    </button>
+    <button class="navbtn" data-view="daily">
+      <svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>روزانه</span>
+    </button>
+    <button class="navbtn" data-view="map">
+      <svg viewBox="0 0 24 24"><path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span>نقشه</span>
+    </button>
+    <button class="navbtn" data-view="details">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v.01M12 11v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>اطلاعات</span>
+    </button>
+  </nav>
+
+</div>
+
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/weathercodes.js"></script>
+<script src="js/app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
