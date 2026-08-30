@@ -1,4 +1,4 @@
-name: Build AppDeck V2 APK
+name: Build AppDeck V3 APK
 
 on:
   push:
@@ -11,19 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract AppDeck sources
-        run: tar -xJf appdeck/AppDeckAndroid.tar.xz
-
-      - name: Prepare compatible Android build
+      - name: Assemble AppDeck V3 sources
         run: |
-          sed -i '/org.jetbrains.kotlin.android/d' AppDeckAndroid/app/build.gradle.kts
-          sed -i 's/compileSdk = 37/compileSdk = 36/' AppDeckAndroid/app/build.gradle.kts
-          sed -i 's/targetSdk = 37/targetSdk = 36/' AppDeckAndroid/app/build.gradle.kts
-          sed -i 's/compose-bom:2026.08.00/compose-bom:2026.06.00/' AppDeckAndroid/app/build.gradle.kts
-          sed -i 's/activity-compose:1.13.0/activity-compose:1.12.1/' AppDeckAndroid/app/build.gradle.kts
-          sed -i 's/core-ktx:1.18.0/core-ktx:1.17.0/' AppDeckAndroid/app/build.gradle.kts
-          sed -i 's/lifecycle-runtime-compose:2.11.0/lifecycle-runtime-compose:2.10.0/' AppDeckAndroid/app/build.gradle.kts
-          sed -i 's/lifecycle-viewmodel-compose:2.11.0/lifecycle-viewmodel-compose:2.10.0/' AppDeckAndroid/app/build.gradle.kts
+          cat appdeck/v3/chunk_* | base64 -d > AppDeckAndroid_v3.tar.xz
+          tar -xJf AppDeckAndroid_v3.tar.xz
+
+      - name: Prepare AGP 9 build
+        run: |
+          sed -i '/org.jetbrains.kotlin.android/d' AppDeckAndroid_v3/app/build.gradle.kts
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -43,15 +38,15 @@ jobs:
           gradle-version: '9.5.0'
 
       - name: Run tests
-        working-directory: AppDeckAndroid
+        working-directory: AppDeckAndroid_v3
         run: gradle testDebugUnitTest --stacktrace
 
       - name: Build APK
-        working-directory: AppDeckAndroid
+        working-directory: AppDeckAndroid_v3
         run: gradle assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AppDeck-v2-debug-apk
-          path: AppDeckAndroid/app/build/outputs/apk/debug/app-debug.apk
+          name: AppDeck-v3-debug-apk
+          path: AppDeckAndroid_v3/app/build/outputs/apk/debug/app-debug.apk
