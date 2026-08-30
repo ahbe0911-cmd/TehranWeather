@@ -22,6 +22,7 @@ jobs:
           cat appdeck/v4/overlay_chunk_* | base64 -d > /tmp/appdeck_v4_overlay.tar.gz
           gzip -t /tmp/appdeck_v4_overlay.tar.gz
           tar -xzf /tmp/appdeck_v4_overlay.tar.gz -C AppDeckAndroid_v4
+          cp appdeck/v4/InstalledAppsRepository.kt AppDeckAndroid_v4/app/src/main/java/ir/appdeck/launcher/data/InstalledAppsRepository.kt
           cp AppDeckAndroid_v4/app/src/main/res/mipmap-nodpi/ic_launcher.webp AppDeckAndroid_v4/app/src/main/res/mipmap-nodpi/ic_launcher_round.webp
           rm -rf AppDeckAndroid_v4/app/src/main/res/mipmap-anydpi AppDeckAndroid_v4/app/src/main/res/mipmap-anydpi-v26
           sed -i '/org.jetbrains.kotlin.android/d' AppDeckAndroid_v4/app/build.gradle.kts
