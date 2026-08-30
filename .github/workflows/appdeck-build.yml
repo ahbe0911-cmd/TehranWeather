@@ -19,7 +19,8 @@ jobs:
 
       - name: Apply AppDeck V4 optimized overlay
         run: |
-          base64 -d appdeck/v4/overlay.b64 > /tmp/appdeck_v4_overlay.tar.gz
+          cat appdeck/v4/overlay_chunk_* | base64 -d > /tmp/appdeck_v4_overlay.tar.gz
+          gzip -t /tmp/appdeck_v4_overlay.tar.gz
           tar -xzf /tmp/appdeck_v4_overlay.tar.gz -C AppDeckAndroid_v4
           cp AppDeckAndroid_v4/app/src/main/res/mipmap-nodpi/ic_launcher.webp AppDeckAndroid_v4/app/src/main/res/mipmap-nodpi/ic_launcher_round.webp
           rm -rf AppDeckAndroid_v4/app/src/main/res/mipmap-anydpi AppDeckAndroid_v4/app/src/main/res/mipmap-anydpi-v26
