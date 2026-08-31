@@ -35,6 +35,15 @@ jobs:
         run: |
           python appdeck/v6/apply_v6.py AppDeckAndroid_v6/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt
 
+      - name: Package assembled V6 source
+        run: tar -czf AppDeckAndroid_v6-source.tar.gz AppDeckAndroid_v6
+
+      - name: Upload assembled V6 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppDeck-v6-source
+          path: AppDeckAndroid_v6-source.tar.gz
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
