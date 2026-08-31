@@ -27,6 +27,15 @@ jobs:
           rm -rf AppDeckAndroid_v4/app/src/main/res/mipmap-anydpi AppDeckAndroid_v4/app/src/main/res/mipmap-anydpi-v26
           sed -i '/org.jetbrains.kotlin.android/d' AppDeckAndroid_v4/app/build.gradle.kts
 
+      - name: Package assembled source
+        run: tar -czf AppDeckAndroid_v4-source.tar.gz AppDeckAndroid_v4
+
+      - name: Upload assembled source
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppDeck-v4-source
+          path: AppDeckAndroid_v4-source.tar.gz
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
