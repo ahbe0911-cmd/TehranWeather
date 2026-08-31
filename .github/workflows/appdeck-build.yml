@@ -1,8 +1,8 @@
-name: Build AppDeck V5 APK
+name: Build AppDeck V6 APK
 
 on:
   push:
-    branches: [ "appdeck-v5" ]
+    branches: [ "appdeck-v6" ]
   workflow_dispatch:
 
 jobs:
@@ -15,21 +15,25 @@ jobs:
         run: |
           cat appdeck/v3/chunk_* | base64 -d > AppDeckAndroid_v3.tar.xz
           tar -xJf AppDeckAndroid_v3.tar.xz
-          mv AppDeckAndroid_v3 AppDeckAndroid_v5
+          mv AppDeckAndroid_v3 AppDeckAndroid_v6
 
       - name: Apply AppDeck V4 optimized base
         run: |
           cat appdeck/v4/overlay_chunk_* | base64 -d > /tmp/appdeck_v4_overlay.tar.gz
           gzip -t /tmp/appdeck_v4_overlay.tar.gz
-          tar -xzf /tmp/appdeck_v4_overlay.tar.gz -C AppDeckAndroid_v5
-          cp appdeck/v4/InstalledAppsRepository.kt AppDeckAndroid_v5/app/src/main/java/ir/appdeck/launcher/data/InstalledAppsRepository.kt
-          cp AppDeckAndroid_v5/app/src/main/res/mipmap-nodpi/ic_launcher.webp AppDeckAndroid_v5/app/src/main/res/mipmap-nodpi/ic_launcher_round.webp
-          rm -rf AppDeckAndroid_v5/app/src/main/res/mipmap-anydpi AppDeckAndroid_v5/app/src/main/res/mipmap-anydpi-v26
-          sed -i '/org.jetbrains.kotlin.android/d' AppDeckAndroid_v5/app/build.gradle.kts
+          tar -xzf /tmp/appdeck_v4_overlay.tar.gz -C AppDeckAndroid_v6
+          cp appdeck/v4/InstalledAppsRepository.kt AppDeckAndroid_v6/app/src/main/java/ir/appdeck/launcher/data/InstalledAppsRepository.kt
+          cp AppDeckAndroid_v6/app/src/main/res/mipmap-nodpi/ic_launcher.webp AppDeckAndroid_v6/app/src/main/res/mipmap-nodpi/ic_launcher_round.webp
+          rm -rf AppDeckAndroid_v6/app/src/main/res/mipmap-anydpi AppDeckAndroid_v6/app/src/main/res/mipmap-anydpi-v26
+          sed -i '/org.jetbrains.kotlin.android/d' AppDeckAndroid_v6/app/build.gradle.kts
 
-      - name: Apply AppDeck V5 interaction and header upgrade
+      - name: Apply AppDeck V5 header and touch reorder
         run: |
-          python appdeck/v5/apply_v5.py AppDeckAndroid_v5/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt
+          python appdeck/v5/apply_v5.py AppDeckAndroid_v6/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt
+
+      - name: Apply AppDeck V6 smoother drag and app actions
+        run: |
+          python appdeck/v6/apply_v6.py AppDeckAndroid_v6/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -49,15 +53,15 @@ jobs:
           gradle-version: '9.5.0'
 
       - name: Run unit tests
-        working-directory: AppDeckAndroid_v5
+        working-directory: AppDeckAndroid_v6
         run: gradle testDebugUnitTest --stacktrace
 
       - name: Build optimized release APK
-        working-directory: AppDeckAndroid_v5
+        working-directory: AppDeckAndroid_v6
         run: gradle assembleRelease --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AppDeck-v5-touch-reorder-apk
-          path: AppDeckAndroid_v5/app/build/outputs/apk/release/app-release.apk
+          name: AppDeck-v6-smooth-actions-apk
+          path: AppDeckAndroid_v6/app/build/outputs/apk/release/app-release.apk
