@@ -66,6 +66,7 @@ jobs:
           echo "07ed8faaa9ae54b9f0644ddb2501ed9aa5f75a020837d59dd1cafc116446b526  /tmp/appdeck_v10_overlay.tar.gz" | sha256sum -c -
           gzip -t /tmp/appdeck_v10_overlay.tar.gz
           tar -xzf /tmp/appdeck_v10_overlay.tar.gz -C AppDeckAndroid_v9
+          python appdeck/v10/fix_v10.py AppDeckAndroid_v9/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt
           mv AppDeckAndroid_v9 AppDeckAndroid_v10
           grep -q 'versionCode = 10' AppDeckAndroid_v10/app/build.gradle.kts
           grep -q 'versionName = "10.0.0"' AppDeckAndroid_v10/app/build.gradle.kts
