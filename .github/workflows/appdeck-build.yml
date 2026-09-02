@@ -48,6 +48,7 @@ jobs:
           python appdeck/v9/apply_v9.py \
             AppDeckAndroid_v9/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt \
             AppDeckAndroid_v9/app/src/main/java/ir/appdeck/launcher/MainActivity.kt
+          python appdeck/v9/fix_v9.py AppDeckAndroid_v9/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt
           sed -i 's/versionCode = 4/versionCode = 9/' AppDeckAndroid_v9/app/build.gradle.kts
           sed -i 's/versionName = "4.0.0"/versionName = "9.0.0"/' AppDeckAndroid_v9/app/build.gradle.kts
 
