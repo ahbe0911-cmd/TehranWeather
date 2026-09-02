@@ -46,6 +46,16 @@ jobs:
         run: |
           python appdeck/v8/apply_v8.py AppDeckAndroid_v8/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt
 
+      - name: Package complete V8 source
+        run: |
+          tar -czf AppDeckAndroid-v8-complete-source.tar.gz AppDeckAndroid_v8
+
+      - name: Upload complete V8 source
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppDeck-v8-complete-source
+          path: AppDeckAndroid-v8-complete-source.tar.gz
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
