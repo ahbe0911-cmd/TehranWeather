@@ -1,8 +1,8 @@
-name: Build AppDeck V10 APK
+name: Build AppDeck V11 APK
 
 on:
   push:
-    branches: [ "appdeck-v10" ]
+    branches: [ "appdeck-v11" ]
   workflow_dispatch:
 
 jobs:
@@ -52,7 +52,7 @@ jobs:
           sed -i 's/versionCode = 4/versionCode = 9/' AppDeckAndroid_v9/app/build.gradle.kts
           sed -i 's/versionName = "4.0.0"/versionName = "9.0.0"/' AppDeckAndroid_v9/app/build.gradle.kts
 
-      - name: Apply AppDeck V10 compact card and productivity upgrade
+      - name: Apply AppDeck V10 productivity upgrade
         run: |
           cat \
             appdeck/v10/overlay_chunk_00 \
@@ -67,18 +67,25 @@ jobs:
           gzip -t /tmp/appdeck_v10_overlay.tar.gz
           tar -xzf /tmp/appdeck_v10_overlay.tar.gz -C AppDeckAndroid_v9
           python appdeck/v10/fix_v10.py AppDeckAndroid_v9/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt
-          mv AppDeckAndroid_v9 AppDeckAndroid_v10
-          grep -q 'versionCode = 10' AppDeckAndroid_v10/app/build.gradle.kts
-          grep -q 'versionName = "10.0.0"' AppDeckAndroid_v10/app/build.gradle.kts
 
-      - name: Package complete V10 source
-        run: tar -czf AppDeckAndroid-v10-complete-source.tar.gz AppDeckAndroid_v10
+      - name: Apply AppDeck V11 true RTL grid and visual redesign
+        run: |
+          python appdeck/v11/apply_v11.py AppDeckAndroid_v9/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt
+          sed -i 's/versionCode = 10/versionCode = 11/' AppDeckAndroid_v9/app/build.gradle.kts
+          sed -i 's/versionName = "10.0.0"/versionName = "11.0.0"/' AppDeckAndroid_v9/app/build.gradle.kts
+          mv AppDeckAndroid_v9 AppDeckAndroid_v11
+          grep -q 'versionCode = 11' AppDeckAndroid_v11/app/build.gradle.kts
+          grep -q 'versionName = "11.0.0"' AppDeckAndroid_v11/app/build.gradle.kts
+          grep -q 'Spacer(Modifier.weight(missing.toFloat()))' AppDeckAndroid_v11/app/src/main/java/ir/appdeck/launcher/ui/AppDeckApp.kt
 
-      - name: Upload complete V10 source
+      - name: Package complete V11 source
+        run: tar -czf AppDeckAndroid-v11-complete-source.tar.gz AppDeckAndroid_v11
+
+      - name: Upload complete V11 source
         uses: actions/upload-artifact@v4
         with:
-          name: AppDeck-v10-complete-source
-          path: AppDeckAndroid-v10-complete-source.tar.gz
+          name: AppDeck-v11-complete-source
+          path: AppDeckAndroid-v11-complete-source.tar.gz
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -98,15 +105,15 @@ jobs:
           gradle-version: '9.5.0'
 
       - name: Run unit tests
-        working-directory: AppDeckAndroid_v10
+        working-directory: AppDeckAndroid_v11
         run: gradle testDebugUnitTest --stacktrace
 
       - name: Build optimized release APK
-        working-directory: AppDeckAndroid_v10
+        working-directory: AppDeckAndroid_v11
         run: gradle assembleRelease --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AppDeck-v10-pro-apk
-          path: AppDeckAndroid_v10/app/build/outputs/apk/release/app-release.apk
+          name: AppDeck-v11-pro-apk
+          path: AppDeckAndroid_v11/app/build/outputs/apk/release/app-release.apk
